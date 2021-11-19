@@ -26,13 +26,33 @@
 		this.speed_y = 0;
 		this.speed_x = 3;
 		this.direction = 1;
+		this.bounce_angle = 0;
+		this.max_bounce_angle = Math.PI / 12;
+		this.speed = 3;
 		board.ball = this;
 		this.kind = "circle";
 	}
-	self.ball.prototype = {
+	self.Ball.prototype = {
 		move: function () {
 			this.x += (this.speed_x * this.direction);
 			this.y += (this.speed_y);
+		},
+
+		get width(){
+			return this.radius * 2;
+		},
+		get height(){
+			return this.radius * 2;
+		},
+		collision: function(bar){
+			var relative_intersect_y = (bar.y + (bar.height / 2) - this.y);
+			var normalizaed_intersect_y = relative_intersect_y / (bar.height / 2);
+			this.bounce_angle = normalizaed_intersect_y * this.max_bounce_angle;
+			this.speed_y = this.speed * -Math.sin(this.bounce_angle);
+			this.speed_x = this.speed * Math.cos(this.bounce_angle);
+
+			if (this.x > (this.board.width / 2)) this.direction = -1;
+			else this.direction = 1;
 		}
 	}
 })();
@@ -82,14 +102,41 @@
 				draw(this.ctx, el);
 			}
 		},
+		check_collisions: function(){
+			for (let i = this.board.bars.length -1; i >= 0; i--) {
+				var bar = this.board.bars[i];
+				if (hit(bar, this.board.ball))
+				this.board.ball.collision(bar);
+			}
+		},
+
 		play: function () {
 			if (this.board.playing){
 				this.clean();
 				this.draw();
+				this.check_collisions();
 				this.board.ball.move();
 			}
 		}
 	}
+
+	function hit(a, b){
+		var hit = false;
+		if (b.x + b.width >= a.x && b.x < a.x + a.width) {
+			if (b.y + b.height >= a.y && b.y < a.y + a.height)
+				hit = true;
+		}
+		if (b.x <= a.x && b.x + b.width >= a.x + a.width) {
+			if (b.y <= a.y && b.y + b.height >= a.y + a.height)
+				hit = true;
+		}
+		if (a.x <= b.x && a.x + a.width >= b.x + b.width) {
+			if (a.y <= b.y && a.y + a.height >= b.y + b.height)
+				hit = true;
+		}
+		return hit;
+	}
+
 	function draw(ctx, element) {
 		switch (element.kind) {
 			case 'rectangle':
